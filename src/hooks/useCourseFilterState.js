@@ -1,7 +1,8 @@
 import { useMemo, useState } from "react";
+import { ALL_CLASSES_CATEGORY, matchesCourseSearch } from "../utils/course";
 
 export default function useCourseFilterState(courses) {
-    const [selectedCategories, setSelectedCategories] = useState(["Semua Kelas"]);
+    const [selectedCategories, setSelectedCategories] = useState([ALL_CLASSES_CATEGORY]);
     const [selectedPrices, setSelectedPrices] = useState([]);
     const [selectedDuration, setSelectedDuration] = useState("");
     const [searchQuery, setSearchQueryValue] = useState("");
@@ -19,7 +20,7 @@ export default function useCourseFilterState(courses) {
     };
 
     const handleReset = () => {
-        setSelectedCategories(["Semua Kelas"]);
+        setSelectedCategories([ALL_CLASSES_CATEGORY]);
         setSelectedPrices([]);
         setSelectedDuration("");
         setSearchQueryValue("");
@@ -29,15 +30,15 @@ export default function useCourseFilterState(courses) {
 
     const toggleCategory = (category) => {
         setCurrentPage(1);
-        if (category === "Semua Kelas") {
-            setSelectedCategories(["Semua Kelas"]);
+        if (category === ALL_CLASSES_CATEGORY) {
+            setSelectedCategories([ALL_CLASSES_CATEGORY]);
             return;
         }
 
-        const withoutAll = selectedCategories.filter((c) => c !== "Semua Kelas");
+        const withoutAll = selectedCategories.filter((c) => c !== ALL_CLASSES_CATEGORY);
         if (withoutAll.includes(category)) {
             const next = withoutAll.filter((c) => c !== category);
-            setSelectedCategories(next.length ? next : ["Semua Kelas"]);
+            setSelectedCategories(next.length ? next : [ALL_CLASSES_CATEGORY]);
         } else {
             setSelectedCategories([...withoutAll, category]);
         }
@@ -58,7 +59,7 @@ export default function useCourseFilterState(courses) {
     const filteredCourses = useMemo(() => {
         let result = [...courses];
 
-        if (!selectedCategories.includes("Semua Kelas")) {
+        if (!selectedCategories.includes(ALL_CLASSES_CATEGORY)) {
             result = result.filter((c) => selectedCategories.includes(c.category));
         }
 
@@ -86,10 +87,7 @@ export default function useCourseFilterState(courses) {
         }
 
         if (searchQuery.trim()) {
-            const query = searchQuery.toLowerCase();
-            result = result.filter(
-                (c) => c.title.toLowerCase().includes(query) || c.instructor.toLowerCase().includes(query)
-            );
+            result = result.filter((course) => matchesCourseSearch(course, searchQuery));
         }
 
         switch (sortBy) {

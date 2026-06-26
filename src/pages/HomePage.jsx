@@ -1,47 +1,57 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
 import { useLocation } from "react-router-dom";
 import HomeNavbar from "../components/layout/HomeNavbar";
 import Footer from "../components/layout/Footer";
 import CourseCard from "../components/ui/CourseCard";
 import { categories } from "../assets/data/courses";
-import useCoursesStore from "../hooks/useCoursesStore";
+import { ALL_CLASSES_CATEGORY } from "../utils/course";
 import bannerHero from "../assets/images/banner/banner-1.jpg";
 import bannerCta from "../assets/images/banner/banner-cta.jpg";
 import FilterPanel from "../components/home/FilterPanel";
 import CourseControls from "../components/home/CourseControls";
 import CoursePagination from "../components/home/CoursePagination";
 import useCourseFilterState from "../hooks/useCourseFilterState";
+import {
+    fetchCourses,
+    selectCourseItems,
+    selectCoursesFetchError,
+    selectCoursesFetchStatus,
+} from "../stores/redux/courseSlice";
 
 export default function HomePage() {
+    const dispatch = useDispatch();
     const location = useLocation();
-    const [activeCategory, setActiveCategory] = useState("Semua Kelas");
+    const courseItems = useSelector(selectCourseItems);
+    const fetchStatus = useSelector(selectCoursesFetchStatus);
+    const fetchError = useSelector(selectCoursesFetchError);
+    const [activeCategory, setActiveCategory] = useState(ALL_CLASSES_CATEGORY);
     const [showFilterMode, setShowFilterMode] = useState(() => Boolean(location.state?.openFilterMode));
     const [categoryCurrentPage, setCategoryCurrentPage] = useState(1);
-    const { courseItems } = useCoursesStore();
-
     const [categoryItemsPerPage, setCategoryItemsPerPage] = useState(10);
+    const [bidangStudiOpen, setBidangStudiOpen] = useState(() => window.innerWidth >= 1024);
+    const [hargaOpen, setHargaOpen] = useState(() => window.innerWidth >= 1024);
+    const [durasiOpen, setDurasiOpen] = useState(() => window.innerWidth >= 1024);
+    const featuredSectionRef = useRef(null);
     const categoryClassListRef = useRef(null);
+    const classListTopRef = useRef(null);
+    const hasPageChangedRef = useRef(false);
+
+    useEffect(() => {
+        if (fetchStatus === "idle") {
+            dispatch(fetchCourses());
+        }
+    }, [dispatch, fetchStatus]);
 
     useEffect(() => {
         const handleResize = () => {
-            if (window.innerWidth >= 1024) {
-                setCategoryItemsPerPage(9);
-            } else {
-                setCategoryItemsPerPage(10);
-            }
+            setCategoryItemsPerPage(window.innerWidth >= 1024 ? 9 : 10);
         };
 
         handleResize();
         window.addEventListener("resize", handleResize);
         return () => window.removeEventListener("resize", handleResize);
     }, []);
-
-    const [bidangStudiOpen, setBidangStudiOpen] = useState(() => window.innerWidth >= 1024);
-    const [hargaOpen, setHargaOpen] = useState(() => window.innerWidth >= 1024);
-    const [durasiOpen, setDurasiOpen] = useState(() => window.innerWidth >= 1024);
-
-    const classListTopRef = useRef(null);
-    const hasPageChangedRef = useRef(false);
 
     const {
         selectedCategories,
@@ -62,15 +72,22 @@ export default function HomePage() {
         toggleDuration,
     } = useCourseFilterState(courseItems);
 
-    const nonFilterModeCourses =
-        activeCategory === "Semua Kelas"
-            ? courseItems
-            : courseItems.filter((c) => c.category === activeCategory);
+    const nonFilterModeCourses = useMemo(
+        () =>
+            activeCategory === ALL_CLASSES_CATEGORY
+                ? courseItems
+                : courseItems.filter((course) => course.category === activeCategory),
+        [activeCategory, courseItems]
+    );
 
     const categoryTotalPages = Math.ceil(nonFilterModeCourses.length / categoryItemsPerPage);
-    const categoryPaginatedCourses = nonFilterModeCourses.slice(
-        (categoryCurrentPage - 1) * categoryItemsPerPage,
-        categoryCurrentPage * categoryItemsPerPage
+    const categoryPaginatedCourses = useMemo(
+        () =>
+            nonFilterModeCourses.slice(
+                (categoryCurrentPage - 1) * categoryItemsPerPage,
+                categoryCurrentPage * categoryItemsPerPage
+            ),
+        [categoryCurrentPage, categoryItemsPerPage, nonFilterModeCourses]
     );
 
     useEffect(() => {
@@ -79,15 +96,15 @@ export default function HomePage() {
         }
     }, [categoryCurrentPage]);
 
-    const handleCategoryPageChange = (page) => {
-        setCategoryCurrentPage(page);
-    };
-
     useEffect(() => {
         if (!hasPageChangedRef.current) return;
         classListTopRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
         hasPageChangedRef.current = false;
     }, [currentPage]);
+
+    const handleCategoryPageChange = (page) => {
+        setCategoryCurrentPage(page);
+    };
 
     const handleCategoryClick = () => {
         const isMobile = window.innerWidth < 1024;
@@ -117,10 +134,94 @@ export default function HomePage() {
         handlePageChange(currentPage + 1);
     };
 
-    return (
-        <div className="bg-brand-cream font-sans text-brand-dark min-h-screen">
-            <HomeNavbar onCategoryClick={handleCategoryClick} onLogoClick={handleLogoClick} showFilterMode={showFilterMode} />
+    const scrollToFeaturedSection = () => {
+        featuredSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    };
 
+    const filterPanelProps = {
+        bidangStudiOpen,
+        hargaOpen,
+        durasiOpen,
+        setBidangStudiOpen,
+        setHargaOpen,
+        setDurasiOpen,
+        selectedCategories,
+        selectedPrices,
+        selectedDuration,
+        toggleCategory,
+        togglePrice,
+        toggleDuration,
+        handleReset,
+    };
+
+    const courseControlProps = {
+        sortBy,
+        setSortBy,
+        searchQuery,
+        setSearchQuery,
+    };
+
+    const isLoading = fetchStatus === "loading";
+    const hasFetchError = fetchStatus === "failed";
+    const errorMessage = fetchError || "Terjadi kesalahan saat memuat data.";
+
+    const isCategoryActive = (category) => activeCategory === category;
+
+    const handleCategorySelect = (category) => {
+        setActiveCategory(category);
+        setCategoryCurrentPage(1);
+    };
+
+    const categoryPrevPage = () => handleCategoryPageChange(categoryCurrentPage - 1);
+    const categoryNextPage = () => handleCategoryPageChange(categoryCurrentPage + 1);
+
+    const renderCategoryEmptyState = () => (
+        <p className="col-span-full py-10 text-center text-slate-400">
+            Tidak ada kelas untuk kategori ini.
+        </p>
+    );
+
+    const renderFilteredEmptyState = () => (
+        <p className="col-span-full py-10 text-center text-slate-400">
+            Tidak ada kelas ditemukan.
+        </p>
+    );
+
+    const renderFilterPanel = (className = "") => (
+        <div className={className}>
+            <FilterPanel {...filterPanelProps} />
+        </div>
+    );
+
+    const renderCourseControls = (mobile = false) => (
+        <CourseControls {...courseControlProps} mobile={mobile} />
+    );
+
+    const renderBody = () => {
+        if (isLoading) {
+            return (
+                <main className="mx-auto flex min-h-[calc(100vh-80px)] w-full max-w-7xl items-center justify-center px-5 py-7 sm:px-6 lg:px-8 lg:py-16">
+                    <p className="text-lg font-medium text-slate-500">Memuat data kelas...</p>
+                </main>
+            );
+        }
+
+        if (hasFetchError) {
+            return (
+                <main className="mx-auto flex min-h-[calc(100vh-80px)] w-full max-w-7xl flex-col items-center justify-center gap-4 px-5 py-7 text-center sm:px-6 lg:px-8 lg:py-16">
+                    <p className="text-lg font-medium text-red-500">Gagal memuat data kelas.</p>
+                    <p className="text-sm text-slate-500">{errorMessage}</p>
+                    <button
+                        onClick={() => dispatch(fetchCourses())}
+                        className="rounded-xl bg-brand-primary px-5 py-2 text-sm font-bold text-white transition hover:brightness-95"
+                    >
+                        Coba Lagi
+                    </button>
+                </main>
+            );
+        }
+
+        return (
             <main className="mx-auto flex w-full max-w-7xl flex-col px-5 py-7 sm:px-6 lg:px-8 lg:py-16">
                 {!showFilterMode ? (
                     <>
@@ -140,13 +241,16 @@ export default function HomePage() {
                                 <p className="mb-6 max-w-[825px] text-sm leading-relaxed text-white/90 sm:text-base">
                                     Temukan ilmu baru yang menarik dan mendalam melalui koleksi video pembelajaran berkualitas tinggi.
                                 </p>
-                                <button className="rounded-xl bg-brand-primary px-4 py-2.5 text-sm font-bold text-white transition hover:brightness-95 sm:px-7 sm:text-base">
+                                <button
+                                    onClick={scrollToFeaturedSection}
+                                    className="rounded-xl bg-brand-primary px-4 py-2.5 text-sm font-bold text-white transition hover:brightness-95 sm:px-7 sm:text-base"
+                                >
                                     Temukan Video Course untuk Dipelajari!
                                 </button>
                             </div>
                         </section>
 
-                        <section className="mb-6 lg:mb-16">
+                        <section ref={featuredSectionRef} className="mb-6 lg:mb-16">
                             <h2 className="text-2xl font-semibold leading-tight sm:text-[32px]">
                                 Koleksi Video Pembelajaran Unggulan
                             </h2>
@@ -155,22 +259,19 @@ export default function HomePage() {
                             </p>
 
                             <div className="mt-5 flex gap-6 overflow-x-auto border-b border-gray-200 pb-0 sm:gap-9">
-                                {categories.map((cat) => {
-                                    const isActive = activeCategory === cat;
+                                {categories.map((category) => {
+                                    const isActive = isCategoryActive(category);
                                     return (
                                         <button
-                                            key={cat}
-                                            onClick={() => {
-                                                setActiveCategory(cat);
-                                                setCategoryCurrentPage(1);
-                                            }}
+                                            key={category}
+                                            onClick={() => handleCategorySelect(category)}
                                             className={`relative whitespace-nowrap pb-3 text-sm font-semibold transition sm:text-base ${
                                                 isActive
                                                     ? "text-brand-tertiary after:absolute after:bottom-0 after:left-0 after:h-1.5 after:w-1/2 after:rounded-full after:bg-brand-tertiary"
                                                     : "font-medium text-slate-500 hover:text-brand-dark"
                                             }`}
                                         >
-                                            {cat}
+                                            {category}
                                         </button>
                                     );
                                 })}
@@ -179,19 +280,15 @@ export default function HomePage() {
                             <div ref={categoryClassListRef} className="mt-8 grid grid-cols-1 gap-6 md2:grid-cols-2 xl:grid-cols-3">
                                 {categoryPaginatedCourses.length > 0 ? (
                                     categoryPaginatedCourses.map((course) => <CourseCard key={course.id} course={course} />)
-                                ) : (
-                                    <p className="col-span-full py-10 text-center text-slate-400">
-                                        Tidak ada kelas untuk kategori ini.
-                                    </p>
-                                )}
+                                ) : renderCategoryEmptyState()}
                             </div>
 
                             {categoryTotalPages > 1 && (
                                 <CoursePagination
                                     currentPage={categoryCurrentPage}
                                     totalPages={categoryTotalPages}
-                                    onPrev={() => handleCategoryPageChange(categoryCurrentPage - 1)}
-                                    onNext={() => handleCategoryPageChange(categoryCurrentPage + 1)}
+                                    onPrev={categoryPrevPage}
+                                    onNext={categoryNextPage}
                                     onSelectPage={handleCategoryPageChange}
                                 />
                             )}
@@ -237,67 +334,20 @@ export default function HomePage() {
                         </section>
 
                         <div className="flex flex-col gap-6 lg:flex-row lg:gap-8">
-                            <div className="hidden lg:block lg:w-[280px] lg:flex-shrink-0">
-                                <FilterPanel
-                                    bidangStudiOpen={bidangStudiOpen}
-                                    hargaOpen={hargaOpen}
-                                    durasiOpen={durasiOpen}
-                                    setBidangStudiOpen={setBidangStudiOpen}
-                                    setHargaOpen={setHargaOpen}
-                                    setDurasiOpen={setDurasiOpen}
-                                    selectedCategories={selectedCategories}
-                                    selectedPrices={selectedPrices}
-                                    selectedDuration={selectedDuration}
-                                    toggleCategory={toggleCategory}
-                                    togglePrice={togglePrice}
-                                    toggleDuration={toggleDuration}
-                                    handleReset={handleReset}
-                                />
-                            </div>
+                            {renderFilterPanel("hidden lg:block lg:w-[280px] lg:flex-shrink-0")}
 
                             <div className="flex-1">
-                                <div className="mb-4 lg:hidden">
-                                    <FilterPanel
-                                        bidangStudiOpen={bidangStudiOpen}
-                                        hargaOpen={hargaOpen}
-                                        durasiOpen={durasiOpen}
-                                        setBidangStudiOpen={setBidangStudiOpen}
-                                        setHargaOpen={setHargaOpen}
-                                        setDurasiOpen={setDurasiOpen}
-                                        selectedCategories={selectedCategories}
-                                        selectedPrices={selectedPrices}
-                                        selectedDuration={selectedDuration}
-                                        toggleCategory={toggleCategory}
-                                        togglePrice={togglePrice}
-                                        toggleDuration={toggleDuration}
-                                        handleReset={handleReset}
-                                    />
-                                </div>
+                                {renderFilterPanel("mb-4 lg:hidden")}
 
-                                <CourseControls
-                                    sortBy={sortBy}
-                                    setSortBy={setSortBy}
-                                    searchQuery={searchQuery}
-                                    setSearchQuery={setSearchQuery}
-                                />
-                                <CourseControls
-                                    mobile
-                                    sortBy={sortBy}
-                                    setSortBy={setSortBy}
-                                    searchQuery={searchQuery}
-                                    setSearchQuery={setSearchQuery}
-                                />
+                                {renderCourseControls()}
+                                {renderCourseControls(true)}
 
                                 <div ref={classListTopRef} className="grid grid-cols-1 gap-6 md2:grid-cols-2">
                                     {filteredCourses.length > 0 ? (
                                         paginatedCourses.map((course) => (
                                             <CourseCard key={course.id} course={course} />
                                         ))
-                                    ) : (
-                                        <p className="col-span-full py-10 text-center text-slate-400">
-                                            Tidak ada kelas ditemukan.
-                                        </p>
-                                    )}
+                                    ) : renderFilteredEmptyState()}
                                 </div>
 
                                 <CoursePagination
@@ -312,7 +362,13 @@ export default function HomePage() {
                     </>
                 )}
             </main>
+        );
+    };
 
+    return (
+        <div className="bg-brand-cream font-sans text-brand-dark min-h-screen">
+            <HomeNavbar onCategoryClick={handleCategoryClick} onLogoClick={handleLogoClick} showFilterMode={showFilterMode} />
+            {renderBody()}
             <Footer />
         </div>
     );
