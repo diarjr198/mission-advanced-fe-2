@@ -1,0 +1,28 @@
+@import url("https://fonts.googleapis.com/css2?family=Lato:wght@400;500;600;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap");
+@import "tailwindcss";
+
+@theme {
+    --font-sans: "Lato", ui-sans-serif, system-ui, sans-serif;
+
+    --color-brand-primary: #3ecf4c;
+    --color-brand-secondary: #ffbd3a;
+    --color-brand-tertiary: #f64920;
+    --color-brand-soft: #e2fcd9;
+    --color-brand-dark: #222325;
+    --color-brand-muted: #6b7280;
+    --color-brand-border: #e5e7eb;
+    --color-brand-cream: #fffdf3;
+
+    --shadow-soft: 0 4px 12px rgba(0, 0, 0, 0.08);
+
+    --breakpoint-md2: 681px;
+}
+
+@layer base {
+  button {
+    cursor: pointer;
+  }
+}
