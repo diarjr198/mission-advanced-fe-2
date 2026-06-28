@@ -4,7 +4,7 @@ import logo from "../../assets/images/logo.png";
 import defaultAvatar from "../../assets/images/avatar/avatar-profile.png";
 import useAuth from "../../hooks/useAuth";
 
-export default function HomeNavbar({ onCategoryClick, onLogoClick, showFilterMode }) {
+export default function HomeNavbar({ onCategoryClick, onLogoClick, showFilterMode, paymentStepper }) {
     const [menuOpen, setMenuOpen] = useState(false);
     const [dropdownOpen, setDropdownOpen] = useState(false);
     const dropdownRef = useRef(null);
@@ -78,6 +78,7 @@ export default function HomeNavbar({ onCategoryClick, onLogoClick, showFilterMod
                 <div className="hidden items-center gap-9 md:flex">
                     {currentUser ? (
                         <>
+                            {paymentStepper && <div className="hidden lg:block">{paymentStepper}</div>}
                             <button
                                 onClick={handleCategoryNav}
                                 className={`text-base font-medium transition ${
@@ -135,6 +136,7 @@ export default function HomeNavbar({ onCategoryClick, onLogoClick, showFilterMod
                         </>
                     ) : (
                         <>
+                            {paymentStepper && <div className="hidden lg:block">{paymentStepper}</div>}
                             <button
                                 onClick={handleCategoryNav}
                                 className={`text-base font-medium transition ${

@@ -301,7 +301,7 @@ export default function CourseDetailPage() {
                                 Penawaran spesial tersisa 2 hari lagi!
                             </p>
 
-                            <button className="mb-6 w-full rounded-[10px] bg-brand-primary py-[10px] text-center font-['DM_Sans'] text-[14px] font-bold leading-[140%] tracking-[0.2px] text-white transition hover:brightness-95 sm:text-[16px]">
+                            <button onClick={() => navigate(`/course/${id}/payment`)} className="mb-6 w-full rounded-[10px] bg-brand-primary py-[10px] text-center font-['DM_Sans'] text-[14px] font-bold leading-[140%] tracking-[0.2px] text-white transition hover:brightness-95 sm:text-[16px]">
                                 Beli Sekarang
                             </button>
 
