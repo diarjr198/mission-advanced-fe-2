@@ -183,6 +183,7 @@ export default function PaymentInformationPage() {
     const [course, setCourse] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const selectedPaymentId = location.state?.selectedPaymentId;
     const selectedMethod = location.state?.selectedMethod || {
         category: "Metode Pembayaran",
         label: "Belum dipilih",
@@ -228,10 +229,10 @@ export default function PaymentInformationPage() {
                     <div className="space-y-8 lg:col-span-2">
                         <OrderSummaryCard course={course} headerContent={<PaymentVirtualAccountCard selectedMethod={selectedMethod} />}>
                             <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
-                                <button onClick={() => navigate(`/course/${id}/payment`)} className="rounded-[10px] border border-[#3ECF4C] py-[10px] text-center font-['DM_Sans'] text-[14px] font-bold leading-[140%] tracking-[0.2px] text-[#3ECF4C] transition hover:bg-[#3ECF4C]/10 lg:text-[16px]">
+                                <button onClick={() => navigate(`/course/${id}/payment`, { state: { mode: "change-payment-method", selectedPaymentId } })} className="rounded-[10px] border border-[#3ECF4C] py-[10px] text-center font-['DM_Sans'] text-[14px] font-bold leading-[140%] tracking-[0.2px] text-[#3ECF4C] transition hover:bg-[#3ECF4C]/10 lg:text-[16px]">
                                     Ganti Metode Pembayaran
                                 </button>
-                                <button className="rounded-[10px] bg-brand-primary py-[10px] text-center font-['DM_Sans'] text-[14px] font-bold leading-[140%] tracking-[0.2px] text-white transition hover:brightness-95 lg:text-[16px]">
+                                <button onClick={() => navigate(`/course/${id}/payment/success`)} className="rounded-[10px] bg-brand-primary py-[10px] text-center font-['DM_Sans'] text-[14px] font-bold leading-[140%] tracking-[0.2px] text-white transition hover:brightness-95 lg:text-[16px]">
                                     Bayar Sekarang
                                 </button>
                             </div>

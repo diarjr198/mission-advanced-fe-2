@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import HomeNavbar from "../components/layout/HomeNavbar";
 import Footer from "../components/layout/Footer";
 import Button from "../components/ui/Button";
@@ -73,6 +73,9 @@ const findPaymentMethodItem = (paymentId) => {
     return method && item ? { category: method.title, label: item.label || method.title, id: item.id, icons: item.icons } : null;
 };
 
+const findPaymentCategoryId = (paymentId) =>
+    PAYMENT_METHODS.find((category) => category.items.some((item) => item.id === paymentId))?.id;
+
 const parsePrice = (price) => {
     const value = String(price || "");
     const digits = Number(value.replace(/[^0-9]/g, ""));
@@ -131,7 +134,7 @@ function PaymentOption({ item, selected, onSelect }) {
 
 export function PaymentStepper({ activeStep = 0, className = "" }) {
     return (
-        <div className={`flex justify-center overflow-hidden ${className}`}>
+        <div className={`flex justify-center overflow-hidden bg-inherit ${className}`}>
             <div className="flex w-full max-w-[520px] items-center justify-center">
                 {PAYMENT_STEPS.map((step, index) => {
                     const isActive = index === activeStep;
@@ -141,21 +144,25 @@ export function PaymentStepper({ activeStep = 0, className = "" }) {
                     return (
                         <div key={step} className="flex min-w-0 items-center">
                             <div className="flex shrink-0 items-center gap-[5px]">
-                                <span className={`flex h-[30px] w-[30px] items-center justify-center rounded-full ${isCompleted ? "bg-[#3ECF4C]" : `border-[3px] ${isGreen ? "border-[#3ECF4C]" : "border-[#3A354161]"}`}`}>
-                                    {isCompleted ? (
-                                        <svg className="h-4 w-4 text-white" viewBox="0 0 12 12" fill="none" aria-hidden="true">
-                                            <path d="M10 3L4.5 8.5L2 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                {isCompleted ? (
+                                    <span className="relative z-10 grid h-[30px] w-[30px] shrink-0 place-items-center rounded-full bg-[#3ECF4C]">
+                                        <svg className="block h-4 w-4 text-white" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                            <path d="M20 6L9 17L4 12" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
                                         </svg>
-                                    ) : (
+                                    </span>
+                                ) : (
+                                    <span
+                                        className={`relative z-10 grid h-[30px] w-[30px] shrink-0 place-items-center rounded-full bg-inherit ${isGreen ? "shadow-[inset_0_0_0_3px_#3ECF4C]" : "shadow-[inset_0_0_0_3px_#3A354161]"}`}
+                                    >
                                         <span className={`h-4 w-4 rounded-full ${isGreen ? "bg-[#3ECF4C]" : "bg-[#3A354161]"}`} />
-                                    )}
-                                </span>
+                                    </span>
+                                )}
                                 <span className={`whitespace-nowrap font-['DM_Sans'] text-[12px] font-bold leading-[140%] tracking-[0.2px] lg:text-[14px] ${isGreen ? "text-[#222325]" : "text-[#3A354161]"}`}>
                                     {step}
                                 </span>
                             </div>
 
-                            {index < PAYMENT_STEPS.length - 1 && <span className="ml-3 h-[3px] w-[clamp(12.5px,8vw,73.5px)] shrink-0 bg-[#3A354161]" />}
+                            {index < PAYMENT_STEPS.length - 1 && <span className="relative z-0 ml-3 h-[3px] w-[clamp(12.5px,8vw,73.5px)] shrink-0 bg-[#3A354161]" />}
                         </div>
                     );
                 })}
@@ -285,11 +292,14 @@ export function OrderSummaryCard({ course, children, headerContent }) {
 export default function PaymentMethodPage() {
     const { id } = useParams();
     const navigate = useNavigate();
+    const location = useLocation();
+    const isChangingPaymentMethod = location.state?.mode === "change-payment-method";
+    const initialPaymentId = location.state?.selectedPaymentId || null;
     const [course, setCourse] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
-    const [openCategoryId, setOpenCategoryId] = useState(PAYMENT_METHODS[0].id);
-    const [selectedPaymentId, setSelectedPaymentId] = useState(null);
+    const [openCategoryId, setOpenCategoryId] = useState(findPaymentCategoryId(initialPaymentId) || PAYMENT_METHODS[0].id);
+    const [selectedPaymentId, setSelectedPaymentId] = useState(initialPaymentId);
     const accordionRefs = useRef({});
 
     useEffect(() => {
@@ -358,9 +368,11 @@ export default function PaymentMethodPage() {
 
                 <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
                     <div className="space-y-8 lg:col-span-2">
+                        {isChangingPaymentMethod && <OrderSummaryCard course={course} />}
+
                         <DetailCard>
                             <h1 className="mb-6 font-['Poppins'] text-[18px] font-semibold leading-[120%] tracking-normal text-[#000000] lg:text-[20px]">
-                                Metode Pembayaran
+                                {isChangingPaymentMethod ? "Ubah Metode Pembayaran" : "Metode Pembayaran"}
                             </h1>
 
                             <div className="space-y-4">
@@ -378,13 +390,21 @@ export default function PaymentMethodPage() {
                                     />
                                 ))}
                             </div>
+
+                            {isChangingPaymentMethod && (
+                                <button onClick={handleBuyNow} className="mt-6 w-full rounded-[10px] bg-brand-primary py-[10px] text-center font-['DM_Sans'] text-[14px] font-bold leading-[140%] tracking-[0.2px] text-white transition hover:brightness-95 lg:text-[16px]">
+                                    Bayar Sekarang
+                                </button>
+                            )}
                         </DetailCard>
 
-                        <OrderSummaryCard course={course}>
-                            <button onClick={handleBuyNow} className="mt-6 w-full rounded-[10px] bg-brand-primary py-[10px] text-center font-['DM_Sans'] text-[14px] font-bold leading-[140%] tracking-[0.2px] text-white transition hover:brightness-95 lg:text-[16px]">
-                                Beli Sekarang
-                            </button>
-                        </OrderSummaryCard>
+                        {!isChangingPaymentMethod && (
+                            <OrderSummaryCard course={course}>
+                                <button onClick={handleBuyNow} className="mt-6 w-full rounded-[10px] bg-brand-primary py-[10px] text-center font-['DM_Sans'] text-[14px] font-bold leading-[140%] tracking-[0.2px] text-white transition hover:brightness-95 lg:text-[16px]">
+                                    Beli Sekarang
+                                </button>
+                            </OrderSummaryCard>
+                        )}
                     </div>
 
                     <div className="order-first lg:order-none lg:col-span-1">
